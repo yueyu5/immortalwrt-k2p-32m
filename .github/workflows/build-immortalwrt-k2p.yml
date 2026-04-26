@@ -1,4 +1,4 @@
-name: Build ImmortalWrt 23.05 for K2P 32M
+name: Build ImmortalWrt 23.05 for K2P 32M (SSR-Plus)
 on:
   workflow_dispatch:
     inputs:
@@ -17,39 +17,36 @@ on:
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-23.05
-  FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
   TZ: Asia/Shanghai
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # 改用22.04，最稳定，无24.04兼容问题
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
-      - name: 检查项目
+      - name: 检查项目源码
         uses: actions/checkout@v4
 
-      - name: 初始化编译环境（修复软件源 + 完整依赖）
+      - name: 初始化编译环境（零报错适配）
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          # 🔥 核心修复：恢复Ubuntu官方软件源（解决所有包找不到问题）
+          # 恢复官方软件源，解决包找不到问题
           sudo tee /etc/apt/sources.list << EOF
           deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
           deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse
           deb http://archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
           deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse
           EOF
-          # 更新并安装编译依赖
+          # 安装 ImmortalWrt 官方标准编译依赖
           sudo apt update -y
           sudo apt install -y \
-          build-essential ccache curl g++-multilib gcc-multilib git \
-          libncurses5-dev libncursesw5-dev libssl-dev make \
-          python3-setuptools python3-wheel rsync unzip zlib1g-dev \
-          file flex gawk gettext libelf-dev subversion patch
+          build-essential git libncurses5-dev libssl-dev python3-setuptools \
+          python3-wheel unzip gawk flex subversion libelf-dev file rsync patch
           # 系统清理
           sudo apt autoremove -y --purge
           sudo apt clean
@@ -57,33 +54,32 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
 
-      - name: 拉取ImmortalWrt源码
+      - name: 拉取 ImmortalWrt 23.05 源码
         working-directory: /workdir
         run: |
           df -h
           git clone $REPO_URL -b $REPO_BRANCH --depth=1 immortalwrt
           ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
 
-      - name: 加载自定义feeds与执行DIY脚本
+      - name: 执行 DIY 脚本（32M适配+SSR-Plus源）
         run: |
-          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF immortalwrt/feeds.conf.default
           chmod +x $DIY_P1_SH
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: 更新并安装feeds
+      - name: 更新并安装插件源
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: 加载编译配置文件
+      - name: 加载编译配置
         run: |
           [ -e $CONFIG_FILE ] && mv $CONFIG_FILE immortalwrt/.config
           cd immortalwrt
           make defconfig
 
-      - name: 开启SSH调试（可选）
+      - name: 开启 SSH 调试（可选）
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event.inputs.debug == 'true' }}
         with:
@@ -97,21 +93,21 @@ jobs:
           make -j$(nproc) || make -j1 V=s
           echo "status=success" >> $GITHUB_OUTPUT
 
-      - name: 整理并上传固件
+      - name: 上传固件成品
         if: steps.compile.outputs.status == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: ImmortalWrt-23.05-K2P-32M-PassWall
+          name: ImmortalWrt-23.05-K2P-32M-SSR-Plus
           path: |
             immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
             immortalwrt/bin/targets/ramips/mt7621/*factory.bin
           retention-days: 30
 
-      - name: 生成Release
+      - name: 自动发布 Release
         if: steps.compile.outputs.status == 'success' && !cancelled()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: immortalwrt-23.05-k2p-32m-${{ github.run_number }}
+          tag_name: immortalwrt-23.05-k2p-32m-ssrplus-${{ github.run_number }}
           files: |
             immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
             immortalwrt/bin/targets/ramips/mt7621/*factory.bin
@@ -119,5 +115,6 @@ jobs:
             ## 固件信息
             - 源码：ImmortalWrt openwrt-23.05
             - 设备：Phicomm K2P (32M 硬改)
-            - 集成插件：PassWall
-            - 编译时间：$(date)
+            - 集成插件：SSR-Plus
+            - 支持协议：Shadowsocks(SS)、ShadowsocksR(SSR)、VMess/VLESS
+            - 编译时间：${{ env.TZ }}
