@@ -28,3 +28,6 @@ echo "CONFIG_TARGET_ROOTFS_PARTSIZE=250" >> .config
 
 # 5. 开启 IPv6 支持
 echo "CONFIG_PACKAGE_ipv6helper=y" >> .config
+
+# 解除 K2P 原厂16M固件大小限制
+sed -i '/IMAGE_SIZE := 15728640/d' target/linux/ramips/image/mt7621.mk
