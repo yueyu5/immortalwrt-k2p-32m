@@ -117,4 +117,4 @@ jobs:
             - 设备：Phicomm K2P (32M 硬改)
             - 集成插件：SSR-Plus
             - 支持协议：Shadowsocks(SS)、ShadowsocksR(SSR)、VMess/VLESS
-            - 编译时间：${{ env.TZ }}
+            - 编译时间：$(date +"%Y-%m-%d %H:%M:%S")
