@@ -1,0 +1,110 @@
+name: Build ImmortalWrt 23.05 for K2P 32M
+on:
+  workflow_dispatch:
+    inputs:
+      debug:
+        type: boolean
+        description: "开启编译调试模式"
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - ".config"
+      - "diy-part1.sh"
+      - ".github/workflows/build-immortalwrt-k2p.yml"
+
+env:
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-23.05.7
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 检查项目
+        uses: actions/checkout@v4
+
+      - name: 初始化编译环境
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install $(curl -fsSL https://raw.githubusercontent.com/immortalwrt/immortalwrt/$(echo $REPO_BRANCH)/README.md#building)
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+
+      - name: 拉取ImmortalWrt源码
+        working-directory: /workdir
+        run: |
+          df -h
+          git clone $REPO_URL -b $REPO_BRANCH --depth=1 immortalwrt
+          ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
+
+      - name: 加载自定义feeds与执行DIY脚本
+        run: |
+          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF immortalwrt/feeds.conf.default
+          chmod +x $DIY_P1_SH
+          cd immortalwrt
+          $GITHUB_WORKSPACE/$DIY_P1_SH
+
+      - name: 更新并安装feeds
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: 加载编译配置文件
+        run: |
+          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE immortalwrt/.config
+          cd immortalwrt
+          make defconfig
+
+      - name: 开启SSH调试（可选）
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event.inputs.debug == 'true' }}
+        with:
+          limit-access-to-actor: true
+
+      - name: 编译固件
+        id: compile
+        run: |
+          cd immortalwrt
+          make download -j$(nproc)
+          make -j$(nproc) || make -j1 V=s
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: 整理并上传固件
+        if: steps.compile.outputs.status == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImmortalWrt-23.05-K2P-32M-PassWall
+          path: |
+            immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
+            immortalwrt/bin/targets/ramips/mt7621/*factory.bin
+          retention-days: 30
+
+      - name: 生成Release（可选）
+        if: steps.compile.outputs.status == 'success' && !cancelled()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: immortalwrt-23.05-k2p-32m-${{ github.run_number }}
+          files: |
+            immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
+            immortalwrt/bin/targets/ramips/mt7621/*factory.bin
+          body: |
+            ## 固件信息
+            - 源码：ImmortalWrt openwrt-23.05
+            - 设备：Phicomm K2P (32M 硬改)
+            - 集成插件：PassWall
+            - 编译时间：${{ env.TZ }}
