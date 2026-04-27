@@ -6,14 +6,7 @@ on:
         type: boolean
         description: "开启编译调试模式"
         default: false
-  push:
-    branches:
-      - main
-    paths:
-      - ".config"
-      - "diy-part1.sh"
-      - ".github/workflows/build-immortalwrt-k2p.yml"
-
+  
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-23.05
