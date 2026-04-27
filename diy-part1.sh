@@ -6,14 +6,11 @@
 #锁定源码根目录，避免工作目录错误
 cd $GITHUB_WORKSPACE/immortalwrt || exit 1
 
-# 【核心要求实现】不删除行，仅修改K2P固件大小上限15744k→32448k
-sed -i '/define Device\/phicomm_k2p/,/endef/s/IMAGE_SIZE := 15744k/IMAGE_SIZE := 20480k/' target/linux/ramips/image/mt7621.mk
-
-# 同步修改DTS设备树，系统识别完整32M闪存，和上面的数值一一对应
-DTS_FILE="target/linux/ramips/dts/mt7621_phicomm_k2p.dts"
-if [ -f "$DTS_FILE" ]; then
-    sed -i 's/reg = <0x0 0x1000000>/reg = <0x0 0x2000000>/g' $DTS_FILE
-fi
+# 同步修改DTS设备树，系统识别完整32M闪存
+###### K2P-32M修改编译文件 ######
+sed -i 's/15744k/32128k/g' target/linux/ramips/image/mt7621.mk
+sed -i 's/"Phicomm K2P";/"Phicomm K2P (32M)";/g' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
+sed -i 's/<0xa0000 0xf60000>/<0xa0000 0x1f60000>/g' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
 
 #【核心】添加MTK官方闭源驱动Feed（驱动+LuCI界面全包含）
 # 先清空重复行，避免冲突
