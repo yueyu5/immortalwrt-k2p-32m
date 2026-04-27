@@ -25,7 +25,7 @@ sed -i 's/CONFIG_PACKAGE_dnsmasq=y/CONFIG_PACKAGE_dnsmasq=n/g' .config 2>/dev/nu
 echo "CONFIG_PACKAGE_dnsmasq-full=y" >> .config
 
 # 32M适配：根分区大小设置为28M，和固件上限匹配
-echo "CONFIG_TARGET_ROOTFS_PARTSIZE=280" >> .config
+#echo "CONFIG_TARGET_ROOTFS_PARTSIZE=280" >> .config
 
 # 开启IPv6支持
 echo "CONFIG_PACKAGE_ipv6helper=y" >> .config
