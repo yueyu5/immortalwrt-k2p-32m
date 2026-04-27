@@ -3,6 +3,8 @@
 # Phicomm K2P 32M 硬改适配
 # 不删除原行，仅修改IMAGE_SIZE数值，完美适配你提供的源码
 # ==============================================
+#锁定源码根目录，避免工作目录错误
+cd $GITHUB_WORKSPACE/immortalwrt || exit 1
 
 # 【核心要求实现】不删除行，仅修改K2P固件大小上限15744k→32448k
 sed -i '/define Device\/phicomm_k2p/,/endef/s/IMAGE_SIZE := 15744k/IMAGE_SIZE := 32448k/' target/linux/ramips/image/mt7621.mk
@@ -16,8 +18,10 @@ if [ -f "$DTS_FILE" ]; then
     sed -i '/label = "unused"/,+4d' $DTS_FILE 2>/dev/null
 fi
 
-#【核心替换】2026年仍有效的K2P mt7615闭源驱动源（适配5.15内核）
-echo "src-git mtk_wifi https://github.com/luhujp/mtk-wireless-driver.git;main" >> feeds.conf.default
+#【核心】添加MTK官方闭源驱动Feed（驱动+LuCI界面全包含）
+# 先清空重复行，避免冲突
+sed -i '/mtk-openwrt-feeds/d' feeds.conf.default
+echo "src-git mtk_wifi https://github.com/Nossiac/mtk-openwrt-feeds.git;master" >> feeds.conf.default
 
 # 添加SSR-Plus官方稳定源
 echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
