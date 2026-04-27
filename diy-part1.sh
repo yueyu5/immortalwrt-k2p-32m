@@ -16,6 +16,9 @@ if [ -f "$DTS_FILE" ]; then
     sed -i '/label = "unused"/,+4d' $DTS_FILE 2>/dev/null
 fi
 
+#【核心替换】2026年仍有效的K2P mt7615闭源驱动源（适配5.15内核）
+echo "src-git mtk_wifi https://github.com/luhujp/mtk-wireless-driver.git;main" >> feeds.conf.default
+
 # 添加SSR-Plus官方稳定源
 echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
 
