@@ -2,15 +2,7 @@ name: Build ImmortalWrt K2P 32M Firmware
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - '.config'
-      - 'diy-part1.sh'
-      - 'diy-part2.sh'
-      - '.github/workflows/build-immortalwrt-k2p.yml'
-
+  
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-23.05
@@ -72,7 +64,7 @@ jobs:
         grep -A 2 "firmware" target/linux/ramips/dts/mt7621_phicomm_k2p.dts
         echo -e "\n===================== 校验完成 ====================="
         # 校验失败直接终止构建，避免白编译
-        if ! grep -q "32128k" target/linux/ramips/image/mt7621.mk; then
+        if ! grep -q "31744k" target/linux/ramips/image/mt7621.mk; then
           echo "❌ 固件容量修改失败，终止构建"
           exit 1
         fi
