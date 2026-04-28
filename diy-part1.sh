@@ -8,7 +8,7 @@ cd $GITHUB_WORKSPACE/immortalwrt || exit 1
 
 # 同步修改DTS设备树，系统识别完整32M闪存
 ###### K2P-32M修改编译文件 ######
-sed -i 's/15744k/32128k/g' target/linux/ramips/image/mt7621.mk
+sed -i 's/15744k/31744k/g' target/linux/ramips/image/mt7621.mk
 sed -i 's/"Phicomm K2P";/"Phicomm K2P (32M)";/g' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
 #降低SPI时钟
 sed -i 's/<50000000>/<10000000>/g' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
