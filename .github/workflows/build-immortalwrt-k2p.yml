@@ -1,117 +1,123 @@
-name: Build ImmortalWrt 23.05 for K2P 32M (SSR-Plus)
+name: Build ImmortalWrt K2P 32M Firmware
+
 on:
   workflow_dispatch:
-    inputs:
-      debug:
-        type: boolean
-        description: "开启编译调试模式"
-        default: false
-  
+  push:
+    branches:
+      - main
+    paths:
+      - '.config'
+      - 'diy-part1.sh'
+      - 'diy-part2.sh'
+      - '.github/workflows/build-immortalwrt-k2p.yml'
+
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-23.05
+  FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+  UPLOAD_BIN_DIR: false
+  UPLOAD_FIRMWARE: true
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
     steps:
-      - name: 检查项目源码
-        uses: actions/checkout@v4
+    - name: 检查项目
+      uses: actions/checkout@main
 
-      - name: 初始化编译环境（零报错适配）
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          # 恢复官方软件源，解决包找不到问题
-          sudo tee /etc/apt/sources.list << EOF
-          deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
-          deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse
-          EOF
-          # 安装 ImmortalWrt 官方标准编译依赖
-          sudo apt update -y
-          sudo apt install -y \
-          build-essential git libncurses5-dev libssl-dev python3-setuptools \
-          python3-wheel unzip gawk flex subversion libelf-dev file rsync patch
-          # 系统清理
-          sudo apt autoremove -y --purge
-          sudo apt clean
-          sudo timedatectl set-timezone "$TZ"
-          sudo mkdir -p /workdir
-          sudo chown $USER:$GROUPS /workdir
+    - name: 初始化编译环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL https://raw.githubusercontent.com/immortalwrt/actions/master/depends/ubuntu-2204)
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
 
-      - name: 拉取 ImmortalWrt 23.05 源码
-        working-directory: /workdir
-        run: |
-          df -h
-          git clone $REPO_URL -b $REPO_BRANCH --depth=1 immortalwrt
-          ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
+    - name: 拉取ImmortalWrt源码
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-      - name: 执行 DIY 脚本（32M适配+SSR-Plus源）
-        run: |
-          chmod +x $DIY_P1_SH
-          cd immortalwrt
-          $GITHUB_WORKSPACE/$DIY_P1_SH
+    - name: 加载自定义feeds
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: 更新并安装插件源
-        run: |
-          cd immortalwrt
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+    # ==============================================
+    # 核心新增：校验修改是否生效，输出到Actions日志
+    # ==============================================
+    - name: 校验DTS与MK修改是否生效
+      run: |
+        cd openwrt
+        echo "===================== 1. K2P固件容量配置校验 ====================="
+        grep -A 5 "phicomm_k2p" target/linux/ramips/image/mt7621.mk
+        echo -e "\n===================== 2. DTS设备名校验 ====================="
+        grep "model = " target/linux/ramips/dts/mt7621_phicomm_k2p.dts
+        echo -e "\n===================== 3. SPI时钟与红灯修复参数校验 ====================="
+        grep -A 2 "spi-max-frequency" target/linux/ramips/dts/mt7621_phicomm_k2p.dts
+        echo -e "\n===================== 4. 固件分区大小校验 ====================="
+        grep -A 2 "firmware" target/linux/ramips/dts/mt7621_phicomm_k2p.dts
+        echo -e "\n===================== 校验完成 ====================="
+        # 校验失败直接终止构建，避免白编译
+        if ! grep -q "32128k" target/linux/ramips/image/mt7621.mk; then
+          echo "❌ 固件容量修改失败，终止构建"
+          exit 1
+        fi
+        if ! grep -q "broken-flash-reset" target/linux/ramips/dts/mt7621_phicomm_k2p.dts; then
+          echo "❌ 红灯修复参数添加失败，终止构建"
+          exit 1
+        fi
+        if ! grep -q "0x1f60000" target/linux/ramips/dts/mt7621_phicomm_k2p.dts; then
+          echo "❌ 分区扩容修改失败，终止构建"
+          exit 1
+        fi
+        echo "✅ 所有核心修改全部生效，继续构建"
 
-      - name: 加载编译配置
-        run: |
-          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE immortalwrt/.config
-          cd immortalwrt
-          make defconfig
+    - name: 更新feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
 
-      - name: 开启 SSH 调试（可选）
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event.inputs.debug == 'true' }}
-        with:
-          limit-access-to-actor: true
+    - name: 加载自定义配置
+      run: |
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        cd openwrt
+        make defconfig
 
-      - name: 编译固件
-        id: compile
-        run: |
-          cd immortalwrt
-          make download -j$(nproc)
-          make -j$(nproc) || make -j1 V=s
-          echo "status=success" >> $GITHUB_OUTPUT
-      - name: 生成编译时间
-        id: build_time
-        if: steps.compile.outputs.status == 'success' && !cancelled()
-        run: |
-           echo "BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
-      - name: 上传固件成品
-        if: steps.compile.outputs.status == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ImmortalWrt-23.05-K2P-32M-SSR-Plus
-          path: |
-            immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
-            immortalwrt/bin/targets/ramips/mt7621/*factory.bin
-          retention-days: 30
+    - name: 下载编译依赖包
+      run: |
+        cd openwrt
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
 
-      - name: 自动发布 Release
-        if: steps.compile.outputs.status == 'success' && !cancelled()
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: immortalwrt-23.05-k2p-32m-ssrplus-${{ github.run_number }}
-          files: |
-            immortalwrt/bin/targets/ramips/mt7621/*sysupgrade.bin
-            immortalwrt/bin/targets/ramips/mt7621/*factory.bin
-          body: |
-            ## 固件信息
-            - 源码：ImmortalWrt openwrt-23.05
-            - 设备：Phicomm K2P (32M 硬改)
-            - 集成插件：SSR-Plus
-            - 支持协议：Shadowsocks(SS)、ShadowsocksR(SSR)、VMess/VLESS
-            - 编译时间：${{ steps.build_time.outputs.BUILD_TIME }}
+    - name: 编译固件
+      run: |
+        cd openwrt
+        echo -e "$(nproc) 线程编译"
+        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "===================== 编译完成，固件信息 ====================="
+        ls -lh bin/targets/ramips/mt7621/*squashfs-sysupgrade.bin
+
+    - name: 上传固件到Actions
+      uses: actions/upload-artifact@main
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      with:
+        name: ImmortalWrt-K2P-32M-Firmware
+        path: openwrt/bin/targets/ramips/mt7621/*squashfs-sysupgrade.bin
