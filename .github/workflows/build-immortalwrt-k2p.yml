@@ -137,7 +137,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       with:
-        tag_name: K2P-${{ github.run_number }}
         name: ImmortalWrt-K2P-32M-${{ env.BUILD_TIME }}
         body: |
           **设备**: Phicomm K2P 32M Flash / 128M 内存
