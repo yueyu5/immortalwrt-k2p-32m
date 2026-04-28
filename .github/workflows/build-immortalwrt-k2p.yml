@@ -107,23 +107,46 @@ jobs:
         echo "===================== 编译完成，固件信息 ====================="
         ls -lh bin/targets/ramips/mt7621/*squashfs-sysupgrade.bin
 
-    - name: 固件信息 & SHA256哈希
-      id: firmware_hash
+    - name: 整理固件信息
+      id: firmware_info
       run: |
         cd openwrt/bin/targets/ramips/mt7621/
-        FW_NAME=$(ls *squashfs-sysupgrade.bin)
-        SHA256=$(sha256sum $FW_NAME | awk '{print $1}')
-        echo "FIRMWARE_NAME=$FW_NAME" >> $GITHUB_ENV
-        echo "FIRMWARE_SHA256=$SHA256" >> $GITHUB_ENV
-        echo "============================================="
-        echo "固件名称: $FW_NAME"
-        echo "固件SHA256: $SHA256"
-        echo "============================================="
-  
-    - name: 上传固件
-      uses: actions/upload-artifact@main
+        FW=$(ls *squashfs-sysupgrade.bin)
+        SHA256=$(sha256sum $FW | awk '{print $1}')
+        SIZE=$(du -h $FW | awk '{print $1}')
+        BYTES=$(du -b $FW | awk '{print $1}')
+        BUILD_TIME=$(date "+%Y-%m-%d %H:%M:%S")
+         
+        echo "FW_NAME=$FW" >> $GITHUB_ENV
+        echo "FW_SHA256=$SHA256" >> $GITHUB_ENV
+        echo "FW_SIZE=$SIZE" >> $GITHUB_ENV
+        echo "FW_BYTES=$BYTES" >> $GITHUB_ENV
+        echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+         
+        echo "固件: $FW"
+        echo "大小: $SIZE ($BYTES Bytes)"
+        echo "SHA256: $SHA256"
+        echo "编译时间: $BUILD_TIME"
+    - name: 上传固件工件
+      uses: actions/upload-artifact@v4
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       with:
-        name: "${{ env.FIRMWARE_NAME }}"
-        path: openwrt/bin/targets/ramips/mt7621/${{ env.FIRMWARE_NAME }}
-        description: "SHA256: ${{ env.FIRMWARE_SHA256 }}"
+        name: ${{ env.FW_NAME }}
+        path: openwrt/bin/targets/ramips/mt7621/${{ env.FW_NAME }}
+    - name: 发布 Release
+      uses: softprops/action-gh-release@v1
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      with:
+        tag_name: K2P-${{ github.run_number }}
+        name: ImmortalWrt-K2P-32M-${{ env.BUILD_TIME }}
+        body: |
+          **设备**: Phicomm K2P 32M Flash / 128M 内存
+          **源码分支**: ${{ env.REPO_BRANCH }}
+          **编译时间**: ${{ env.BUILD_TIME }}
+          **固件名称**: ${{ env.FW_NAME }}
+          **文件大小**: ${{ env.FW_SIZE }}
+          **字节数**: ${{ env.FW_BYTES }} Byte
+          **SHA256**: `{{ env.FW_SHA256 }}`
+        files: openwrt/bin/targets/ramips/mt7621/${{ env.FW_NAME }}
+        draft: false
+        prerelease: false
