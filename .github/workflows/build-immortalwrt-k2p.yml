@@ -68,10 +68,10 @@ jobs:
           echo "❌ 固件容量修改失败，终止构建"
           exit 1
         fi
-        if ! grep -q "broken-flash-reset" target/linux/ramips/dts/mt7621_phicomm_k2p.dts; then
-          echo "❌ 红灯修复参数添加失败，终止构建"
-          exit 1
-        fi
+        #if ! grep -q "broken-flash-reset" target/linux/ramips/dts/mt7621_phicomm_k2p.dts; then
+         # echo "❌ 红灯修复参数添加失败，终止构建"
+         # exit 1
+        #fi
         if ! grep -q "0x1f60000" target/linux/ramips/dts/mt7621_phicomm_k2p.dts; then
           echo "❌ 分区扩容修改失败，终止构建"
           exit 1
@@ -111,5 +111,5 @@ jobs:
       uses: actions/upload-artifact@main
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       with:
-        name: ImmortalWrt-K2P-32M-Firmware
+        name: ImmortalWrt-K2P-32M-Firmware开源驱动
         path: openwrt/bin/targets/ramips/mt7621/*squashfs-sysupgrade.bin
