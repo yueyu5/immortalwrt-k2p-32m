@@ -16,3 +16,6 @@ sed -i 's/<0xa0000 0xf60000>/<0xa0000 0x1f60000>/g' target/linux/ramips/dts/mt76
 
 # 添加SSR-Plus官方稳定源
 echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
+# 添加 aliddns
+echo 'src-git aliddns https://github.com/kenzok78/luci-app-aliddns' >> feeds.conf.default
+
