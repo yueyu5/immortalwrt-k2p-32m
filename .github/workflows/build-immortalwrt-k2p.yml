@@ -2,7 +2,8 @@ name: Build ImmortalWrt K2P 32M Firmware
 
 on:
   workflow_dispatch:
-  
+permissions:
+   contents: write
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-23.05
@@ -116,17 +117,21 @@ jobs:
         SIZE=$(du -h $FW | awk '{print $1}')
         BYTES=$(du -b $FW | awk '{print $1}')
         BUILD_TIME=$(date "+%Y-%m-%d %H:%M:%S")
+        # 自动日期TAG：v20260429
+        TAG=$(date "+v%Y%m%d")
          
         echo "FW_NAME=$FW" >> $GITHUB_ENV
         echo "FW_SHA256=$SHA256" >> $GITHUB_ENV
         echo "FW_SIZE=$SIZE" >> $GITHUB_ENV
         echo "FW_BYTES=$BYTES" >> $GITHUB_ENV
         echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+        echo "TAG=$TAG" >> $GITHUB_ENV
          
         echo "固件: $FW"
         echo "大小: $SIZE ($BYTES Bytes)"
         echo "SHA256: $SHA256"
         echo "编译时间: $BUILD_TIME"
+        echo "TAG: $TAG"
     - name: 上传固件工件
       uses: actions/upload-artifact@v4
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
@@ -137,7 +142,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       with:
-        name: ImmortalWrt-K2P-32M-${{ env.BUILD_TIME }}
+        tag_name: ${{ env.TAG }}
+        name: ImmortalWrt-K2P-32M-${{ env.TAG }}
         body: |
           **设备**: Phicomm K2P 32M Flash / 128M 内存
           **源码分支**: ${{ env.REPO_BRANCH }}
