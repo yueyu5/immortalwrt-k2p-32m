@@ -150,7 +150,7 @@ jobs:
           **编译时间**: ${{ env.BUILD_TIME }}
           **固件名称**: ${{ env.FW_NAME }}
           **文件大小**: ${{ env.FW_SIZE }}
-          **字节数**: ${{ env.FW_BYTES }} Byte
+          **字节数**: ${{ env.FW_BYTES }} Bytes
           **SHA256**: ${{ env.FW_SHA256 }}
         files: openwrt/bin/targets/ramips/mt7621/${{ env.FW_NAME }}
         draft: false
