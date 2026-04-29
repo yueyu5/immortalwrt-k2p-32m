@@ -146,7 +146,7 @@ jobs:
         name: ImmortalWrt-K2P-32M-${{ env.TAG }}
         body: |
           **设备**: Phicomm K2P 32M Flash / 128M 内存
-          **源码分支**: ${{ env.REPO_BRANCH }}
+          **源码分支**: ${{ env.REPO_BRANCH }}，开源驱动
           **编译时间**: ${{ env.BUILD_TIME }}
           **固件名称**: ${{ env.FW_NAME }}
           **文件大小**: ${{ env.FW_SIZE }}
