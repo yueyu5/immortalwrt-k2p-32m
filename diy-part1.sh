@@ -19,6 +19,6 @@ echo 'src-git aliddns https://github.com/kenzok78/luci-app-aliddns' >> feeds.con
 
 # Argon主题 master 分支
 echo "src-git argon https://github.com/jerrykuku/luci-theme-argon.git;master" >> feeds.conf.default
-# Argon主题设置插件
-echo "src-git argoncfg https://github.com/jerrykuku/luci-app-argon-config.git;master" >> feeds.conf.default
+# Argon主题设置插件，官方源有
+#echo "src-git argoncfg https://github.com/jerrykuku/luci-app-argon-config.git;master" >> feeds.conf.default
 
