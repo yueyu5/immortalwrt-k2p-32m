@@ -17,6 +17,9 @@ echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feed
 # 添加 aliddns
 echo 'src-git aliddns https://github.com/kenzok78/luci-app-aliddns' >> feeds.conf.default
 
+# 删除官方 Argon 主题
+rm -rf feeds/luci/themes/luci-theme-argon
+rm -rf feeds/luci/applications/luci-app-argon-config 2>/dev/nul
 # Argon主题 master 分支
 echo "src-git argon https://github.com/jerrykuku/luci-theme-argon.git;master" >> feeds.conf.default
 # Argon主题设置插件
