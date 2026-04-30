@@ -27,7 +27,7 @@ sed -i 's/192.168.1.1/192.168.2.1/g' package/base-files/files/bin/config_generat
 # 修改默认主机名
 sed -i 's/ImmortalWrt/K2P-32M/g' package/base-files/files/bin/config_generate
 
-#屏蔽官方 Argon，只留第三方
-rm -rf feeds/luci/themes/luci-theme-argon
+# 用第三方Argon覆盖官方文件
+cp -rf feeds/argon/luci-theme-argon/* feeds/luci/themes/luci-theme-argon/
 
 echo "个性化配置完成！"
