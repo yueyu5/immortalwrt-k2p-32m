@@ -11,11 +11,18 @@ sed -i 's/"Phicomm K2P";/"Phicomm K2P-32M";/g' target/linux/ramips/dts/mt7621_ph
 sed -i '/spi-max-frequency/a\\t\tbroken-flash-reset;' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
 sed -i 's/<0xa0000 0xf60000>/<0xa0000 0x1f60000>/g' target/linux/ramips/dts/mt7621_phicomm_k2p.dts
 
+# 移除不必要的语言包（节省空间）
+find package -name "*zh-tw*" -type f -delete 2>/dev/null || true
+find package -name "*zh_HK*" -type f -delete 2>/dev/null || true
+
+# 添加Passwall源
+echo "src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main" >> feeds.conf.default
+echo "src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall.git;main" >> feeds.conf.default
 
 # 添加SSR-Plus官方稳定源
-echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
+#echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
 # 添加 aliddns
-echo 'src-git aliddns https://github.com/kenzok78/luci-app-aliddns' >> feeds.conf.default
+#echo 'src-git aliddns https://github.com/kenzok78/luci-app-aliddns' >> feeds.conf.default
 
 # 删除官方 Argon 主题
 rm -rf feeds/luci/themes/luci-theme-argon
