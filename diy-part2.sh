@@ -11,11 +11,11 @@ sed -i "/timezone='CST-8'/a\\\t\tset system.@system[-1].zonename='Asia/Shanghai'
 # 修改默认语言为中文
 sed -i "s/option lang 'en'/option lang 'zh-cn'/g" package/base-files/files/bin/config_generate
 
-# 修改 2.4G 默认 SSID
-sed -i 's/ImmortalWrt/opo-2.4G/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
-
 # 修改 5G 默认 SSID
 sed -i 's/ImmortalWrt_5G/opo-5G/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
+
+# 修改 2.4G 默认 SSID
+sed -i 's/ImmortalWrt/opo-2.4G/g' package/kernel/mac80211/files/lib/wifi/mac80211.sh
 
 # 替换默认软件源为清华源
 sed -i 's/downloads.immortalwrt.org/mirrors.tuna.tsinghua.edu.cn\/immortalwrt/g' package/emortal/emortal-files/etc/opkg/distfeeds.conf
