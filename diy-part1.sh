@@ -20,7 +20,7 @@ echo "src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-pass
 echo "src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall.git;main" >> feeds.conf.default
 
 # 添加aliddns源
-echo "src-git aliddns https://gitcode.com/gh_mirrors/lu/luci-app-aliddns;main" >> feeds.conf.default
+echo "src-git aliddns https://github.com/honwen/luci-app-aliddns.git;master" >> feeds.conf.default
 
 # 添加SSR-Plus官方稳定源
 #echo "src-git helloworld https://github.com/fw876/helloworld.git;master" >> feeds.conf.default
